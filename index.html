@@ -133,6 +133,8 @@ function search() {
 
         nearbySearchPage();
 
+        let animationInterval = null; // 全域變數，確保只會有一個 interval
+        
         function pickRandomRestaurant() {
             document.getElementById("loading").textContent = "";
             const resultDiv = document.getElementById("result");
@@ -142,17 +144,25 @@ function search() {
                 return;
             }
         
+            // 如果動畫已經在跑，先清掉
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+        
             const names = allResults.map(r => r.name);
             let count = 0;
             const maxCount = 20; // 閃爍次數
             const intervalTime = 100;
         
-            const interval = setInterval(() => {
+            animationInterval = setInterval(() => {
                 const randomIndex = Math.floor(Math.random() * names.length);
                 resultDiv.textContent = names[randomIndex];
                 count++;
                 if (count >= maxCount) {
-                    clearInterval(interval);
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+        
                     // 最終隨機選一個餐廳
                     const random = allResults[Math.floor(Math.random() * allResults.length)];
                     resultDiv.innerHTML = `
@@ -175,5 +185,6 @@ function search() {
 
 </body>
 </html>
+
 
 
