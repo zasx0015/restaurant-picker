@@ -1,64 +1,56 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>隨機挑選餐廳</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px;
-            padding: 0;
-        }
-        h2 {
-            color: #333;
-            text-align: center;
-        }
-        input, select {
-            padding: 12px;
-            margin: 8px 0;
-            width: 90%;
-            max-width: 400px;
-            font-size: 18px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        button {
-            padding: 12px 24px;
-            margin-top: 15px;
-            font-size: 20px;
-            width: 90%;
-            max-width: 400px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #loading {
-            margin-top: 20px;
-            color: #666;
-            font-size: 16px;
-        }
-        #result {
-            margin-top: 30px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #e91e63;
-            text-align: center;
-            min-height: 100px;
-        }
-        #map {
-            width: 0;
-            height: 0; /* 隱藏地圖 */
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隨機挑選餐廳 (最終升級版)</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px;
+        padding: 0;
+    }
+    h2 { color: #333; text-align: center; }
+    input, select {
+        padding: 12px;
+        margin: 8px 0;
+        width: 90%;
+        max-width: 400px;
+        font-size: 18px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+    button {
+        padding: 12px 24px;
+        margin-top: 15px;
+        font-size: 20px;
+        width: 90%;
+        max-width: 400px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    button:hover { background-color: #45a049; }
+    #loading {
+        margin-top: 20px;
+        color: #666;
+        font-size: 16px;
+    }
+    #result {
+        margin-top: 30px;
+        font-size: 22px;
+        font-weight: bold;
+        color: #e91e63;
+        text-align: center;
+        min-height: 100px;
+    }
+    #map { width:0; height:0; }
+</style>
 </head>
 <body>
 
@@ -71,9 +63,9 @@
 <select id="typeSelect">
     <option value="restaurant">隨機餐廳</option>
     <option value="cafe">咖啡廳</option>
-    <option value="meal_takeaway">熱炒</option>
-    <option value="bar">速食店</option>
-    <option value="bakery">餐廳</option>
+    <option value="meal_takeaway">外帶餐廳</option>
+    <option value="bar">酒吧</option>
+    <option value="bakery">麵包店</option>
 </select>
 
 <button onclick="search()">開始抽餐廳</button>
@@ -91,58 +83,41 @@ function search() {
     const type = document.getElementById("typeSelect").value;
     const keyword = document.getElementById("keywordInput").value.trim();
 
-    if (!locationName) {
-        alert("請輸入地點！");
-        return;
-    }
-
-    // 半徑沒填或 <=0 就預設 1000 公尺
-    if (!radius || radius <= 0) {
-        radius = 1000;
-    }
+    if (!locationName) { alert("請輸入地點！"); return; }
+    if (!radius || radius <= 0) radius = 1000;
 
     document.getElementById("loading").textContent = "正在取得座標...";
     document.getElementById("result").textContent = "";
 
     const geocoder = new google.maps.Geocoder();
 
-    geocoder.geocode({ address: locationName }, function (results, status) {
+    geocoder.geocode({ address: locationName }, function(results, status) {
         if (status !== "OK") {
             document.getElementById("loading").textContent = "地點無法取得座標：" + status;
             return;
         }
 
         const location = results[0].geometry.location;
-
-        map = new google.maps.Map(document.getElementById("map"), {
-            center: location,
-            zoom: 15
-        });
+        map = new google.maps.Map(document.getElementById("map"), { center: location, zoom: 15 });
 
         document.getElementById("loading").textContent = "正在搜尋餐廳...";
 
         const service = new google.maps.places.PlacesService(map);
         let allResults = [];
 
+        // 定義遞迴抓取多頁
         function nearbySearchPage(pageToken = null) {
-            const request = {
-                location: location,
-                radius: radius,
-                type: type
-            };
+            const request = { location: location, radius: radius, type: type };
             if (keyword) request.keyword = keyword;
             if (pageToken) request.pageToken = pageToken;
 
             service.nearbySearch(request, function(results, status, pagination) {
                 if (status === "OK" && results.length) {
                     allResults = allResults.concat(results);
-
                     if (pagination && pagination.hasNextPage) {
-                        // Google 建議等待 2 秒再呼叫 nextPage
-                        setTimeout(() => {
-                            nearbySearchPage(pagination.nextPage());
-                        }, 2000);
+                        setTimeout(() => { nearbySearchPage(pagination.nextPage()); }, 2000);
                     } else {
+                        // 所有頁面抓完再抽選
                         pickRandomRestaurant();
                     }
                 } else {
@@ -160,14 +135,16 @@ function search() {
 
         function pickRandomRestaurant() {
             document.getElementById("loading").textContent = "";
-            const names = allResults.map(r => r.name);
-            if (!names.length) {
+            if (!allResults.length) {
                 document.getElementById("result").textContent = "找不到餐廳";
                 return;
             }
 
-            let index = 0;
+            const names = allResults.map(r => r.name);
             const resultDiv = document.getElementById("result");
+            let index = 0;
+
+            // 開始抽選動畫
             resultDiv.textContent = "抽選中...";
             const interval = setInterval(() => {
                 resultDiv.textContent = names[index];
@@ -179,7 +156,7 @@ function search() {
                 const random = allResults[Math.floor(Math.random() * allResults.length)];
                 resultDiv.innerHTML = `
                     🎉 今天吃：<br><br>
-                    <span style="font-size: 28px;">${random.name}</span><br><br>
+                    <span style="font-size:28px;">${random.name}</span><br><br>
                     ⭐ 評分：${random.rating || "無"}<br>
                     🗺️ 地址：${random.vicinity || "無資料"}<br><br>
                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(random.name)}" target="_blank">
@@ -192,7 +169,6 @@ function search() {
 }
 </script>
 
-<!-- 加入 Maps JavaScript API + Places Library -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA3pTso7fz7uUkB4jvie9X3hy__fSmYwLw&libraries=places"></script>
 
 </body>
