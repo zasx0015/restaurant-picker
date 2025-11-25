@@ -135,35 +135,37 @@ function search() {
 
         function pickRandomRestaurant() {
             document.getElementById("loading").textContent = "";
+            const resultDiv = document.getElementById("result");
+        
             if (!allResults.length) {
-                document.getElementById("result").textContent = "找不到餐廳";
+                resultDiv.textContent = "找不到餐廳";
                 return;
             }
-
+        
             const names = allResults.map(r => r.name);
-            const resultDiv = document.getElementById("result");
-            let index = 0;
-
-            // 開始抽選動畫
-            resultDiv.textContent = "抽選中...";
+            let count = 0;
+            const maxCount = 20; // 閃爍次數
+            const intervalTime = 100;
+        
             const interval = setInterval(() => {
-                resultDiv.textContent = names[index];
-                index = (index + 1) % names.length;
-            }, 100);
-
-            setTimeout(() => {
-                clearInterval(interval);
-                const random = allResults[Math.floor(Math.random() * allResults.length)];
-                resultDiv.innerHTML = `
-                    🎉 今天吃：<br><br>
-                    <span style="font-size:28px;">${random.name}</span><br><br>
-                    ⭐ 評分：${random.rating || "無"}<br>
-                    🗺️ 地址：${random.vicinity || "無資料"}<br><br>
-                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(random.name)}" target="_blank">
-                        打開 Google 地圖
-                    </a>
-                `;
-            }, 2000);
+                const randomIndex = Math.floor(Math.random() * names.length);
+                resultDiv.textContent = names[randomIndex];
+                count++;
+                if (count >= maxCount) {
+                    clearInterval(interval);
+                    // 最終隨機選一個餐廳
+                    const random = allResults[Math.floor(Math.random() * allResults.length)];
+                    resultDiv.innerHTML = `
+                        🎉 今天吃：<br><br>
+                        <span style="font-size:28px;">${random.name}</span><br><br>
+                        ⭐ 評分：${random.rating || "無"}<br>
+                        🗺️ 地址：${random.vicinity || "無資料"}<br><br>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(random.name)}" target="_blank">
+                            打開 Google 地圖
+                        </a>
+                    `;
+                }
+            }, intervalTime);
         }
     });
 }
@@ -173,4 +175,5 @@ function search() {
 
 </body>
 </html>
+
 
