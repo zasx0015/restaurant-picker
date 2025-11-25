@@ -2,39 +2,61 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>隨機挑選區域餐廳</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隨機挑選餐廳</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 60px;
+            margin: 20px;
+            padding: 0;
         }
-        #result {
-            margin-top: 40px;
-            font-size: 26px;
-            font-weight: bold;
-            color: #e91e63;
+        h2 {
+            color: #333;
+            text-align: center;
+        }
+        input, select {
+            padding: 12px;
+            margin: 8px 0;
+            width: 90%;
+            max-width: 400px;
+            font-size: 18px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 12px 24px;
+            margin-top: 15px;
+            font-size: 20px;
+            width: 90%;
+            max-width: 400px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
         #loading {
             margin-top: 20px;
-            font-size: 18px;
             color: #666;
+            font-size: 16px;
         }
-        input {
-            padding: 8px;
-            margin: 5px;
-            width: 280px;
-        }
-        button {
-            padding: 10px 20px;
-            margin-top: 20px;
-            font-size: 18px;
+        #result {
+            margin-top: 30px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #e91e63;
+            text-align: center;
+            min-height: 100px;
         }
         #map {
             width: 0;
-            height: 0;  /* Maps API 必須要 map，但我們不顯示 */
+            height: 0; /* 隱藏地圖 */
         }
     </style>
 </head>
@@ -44,12 +66,19 @@
 
     <input id="locationInput" type="text" placeholder="輸入地點，例如：台北市 信義區">
     <input id="radiusInput" type="number" placeholder="搜尋半徑（公尺，例如：1500）">
+    
+    <select id="typeSelect">
+        <option value="restaurant">隨機餐廳</option>
+        <option value="cafe">咖啡廳</option>
+        <option value="meal_takeaway">外帶餐廳</option>
+        <option value="bar">酒吧</option>
+        <option value="bakery">麵包店</option>
+    </select>
 
     <button onclick="search()">開始抽餐廳</button>
 
     <div id="loading"></div>
     <div id="result"></div>
-
     <div id="map"></div>
 
     <script>
@@ -58,6 +87,7 @@
         function search() {
             const locationName = document.getElementById("locationInput").value;
             const radius = parseInt(document.getElementById("radiusInput").value);
+            const type = document.getElementById("typeSelect").value;
 
             if (!locationName || !radius) {
                 alert("請輸入地點與半徑！");
@@ -65,19 +95,18 @@
             }
 
             document.getElementById("loading").textContent = "正在取得座標...";
+            document.getElementById("result").textContent = "";
 
-            // 1️⃣ Geocoder：地名 → 經緯度
             const geocoder = new google.maps.Geocoder();
 
             geocoder.geocode({ address: locationName }, function (results, status) {
                 if (status !== "OK") {
-                    document.getElementById("loading").textContent = "地點找不到";
+                    document.getElementById("loading").textContent = "地點無法取得座標：" + status;
                     return;
                 }
 
                 const location = results[0].geometry.location;
 
-                // 2️⃣ 初始化地圖（不顯示）
                 map = new google.maps.Map(document.getElementById("map"), {
                     center: location,
                     zoom: 15
@@ -85,13 +114,12 @@
 
                 document.getElementById("loading").textContent = "正在搜尋餐廳...";
 
-                // 3️⃣ Places Nearby Search（合法、前端能用）
                 const service = new google.maps.places.PlacesService(map);
                 service.nearbySearch(
                     {
                         location: location,
                         radius: radius,
-                        type: "restaurant"
+                        type: type
                     },
                     function (results, status) {
                         if (status !== "OK" || !results.length) {
@@ -100,18 +128,31 @@
                             return;
                         }
 
-                        const random = results[Math.floor(Math.random() * results.length)];
-
                         document.getElementById("loading").textContent = "";
-                        document.getElementById("result").innerHTML = `
-                            🎉 今天吃：<br><br>
-                            <span style="font-size: 30px;">${random.name}</span><br><br>
-                            ⭐ 評分：${random.rating || "無"}<br>
-                            🗺️ 地址：${random.vicinity || "無資料"}<br><br>
-                            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(random.name)}" target="_blank">
-                                打開 Google 地圖
-                            </a>
-                        `;
+
+                        // 抽選動畫效果
+                        const names = results.map(r => r.name);
+                        let index = 0;
+                        const resultDiv = document.getElementById("result");
+                        resultDiv.textContent = "抽選中...";
+                        const interval = setInterval(() => {
+                            resultDiv.textContent = names[index];
+                            index = (index + 1) % names.length;
+                        }, 100);
+
+                        setTimeout(() => {
+                            clearInterval(interval);
+                            const random = results[Math.floor(Math.random() * results.length)];
+                            resultDiv.innerHTML = `
+                                🎉 今天吃：<br><br>
+                                <span style="font-size: 28px;">${random.name}</span><br><br>
+                                ⭐ 評分：${random.rating || "無"}<br>
+                                🗺️ 地址：${random.vicinity || "無資料"}<br><br>
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(random.name)}" target="_blank">
+                                    打開 Google 地圖
+                                </a>
+                            `;
+                        }, 2000); // 2秒動畫
                     }
                 );
             });
@@ -123,5 +164,3 @@
 
 </body>
 </html>
-
-
